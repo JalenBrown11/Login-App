@@ -11,11 +11,12 @@ BUTTON_ACTIVE_BG = '#353852'
 
 class App(tk.Tk):
     """ Custom App Window """
-    def __init__(self, window_title: str="App", icon_path: str=None):
+    def __init__(self, window_title: str="App", icon_path: str=None, width: int=400, height: int=380):
         """ Initialize App Widget"""
         super(App, self).__init__()
         self.title(window_title)
         self.iconbitmap(icon_path)
+        self.geometry(f'{width}x{height}')
         self.configure(
             background='#171924'
         )
@@ -27,21 +28,28 @@ class App(tk.Tk):
         """ Frames """
         self.mainFrame = Frame(self)
         self.titleFrame = Frame(self.mainFrame)
+        self.msgFrame = Frame(self.mainFrame)
         self.inputFrame = Frame(self.mainFrame)
         self.btnFrame = Frame(self.mainFrame)
         
         """ Widgets """
-        self.title_lbl = Label(self.titleFrame, 'Login')
+        self.title_lbl = Label(self.titleFrame, 'Registration')
         self.user_lbl = Label(self.inputFrame, 'Username')
         self.pass_lbl = Label(self.inputFrame, 'Password')
-        self.user_err_lbl = Label(self.inputFrame, "")
-        self.pass_err_lbl = Label(self.inputFrame, "")
+        self.user_err_lbl = Label(self.inputFrame, '')
+        self.pass_err_lbl = Label(self.inputFrame, '')
+        self.msg_lbl = Label(self.msgFrame, '')
         self.user_entry = Entry(self.inputFrame, username)
         self.pass_entry = Entry(self.inputFrame, password, True)
-        self.btn1 = Button(self.btnFrame, 'Submit')
+        self.btn1 = Button(self.btnFrame, 'Sign Up')
 
         """ Commands """
-        self.btn1.set_command(self.submit_btn_click)
+        self.btn1.set_command(self.signup_btn_click)
+
+        """ Binding """
+        self.bind('<Key>', self.key_event) # Receive all key events
+        self.user_entry.bind('<Key-space>', lambda _:'break') # Disable space key
+        self.pass_entry.bind('<Key-space>', lambda _:'break') # Disable space key
 
         """ Layout """
         # Widget layout (Frames)
@@ -53,12 +61,13 @@ class App(tk.Tk):
         self.btn1.pack()
         
         # Frame layout (Main Frame)
-        self.titleFrame.pack(side=tk.TOP, pady=[0, 24])
+        self.titleFrame.pack(side=tk.TOP, pady=[0, 4])
         self.inputFrame.pack(side=tk.TOP)
-        self.btnFrame.pack(side=tk.TOP, pady=[16, 0])
+        self.msgFrame.pack(side=tk.TOP)
+        self.btnFrame.pack(side=tk.TOP, pady=[8, 0])
 
         # Window layout (Main Window)
-        self.mainFrame.pack(padx=16, pady=16)
+        self.mainFrame.place(relx=.5, rely=.45,anchor=tk.CENTER)
    
         """ Style Widgets """
         # Set title font
@@ -68,8 +77,20 @@ class App(tk.Tk):
         self.user_err_lbl.set_font(size=10, weight='normal', color='#FF8C8C')
         self.pass_err_lbl.set_font(size=10, weight='normal', color='#FF8C8C')
 
-    def submit_btn_click(self):
-        """ Button command for login"""
+        # Set message font
+        self.msg_lbl.set_font(size=12, weight='normal', color='#B2FF8C')
+    
+    def key_event(self, event: tk.Event):
+        """ Key event handler """
+        # If 'Escape' key pressed
+        if event.keysym == 'Escape':
+            self.destroy() # Close application
+        # If 'Enter' key pressed
+        if event.keysym == 'Return':
+            self.btn1.invoke() # Trigger login/sign up button commmand
+
+    def signup_btn_click(self):
+        """ Button command for Sign Up"""
         # Input flag variables
         is_valid_username = False
         is_valid_password = False
@@ -98,8 +119,33 @@ class App(tk.Tk):
 
         # If username and password is valid, then create login file
         if is_valid_username and is_valid_password:
-            self.create_login()      
-    
+            self.create_login() # Create Login.txt file
+
+            # Update Labels, Entries and Buttons (Login)
+            self.title_lbl.set_text('Login') 
+            self.user_entry.set_text('')
+            self.pass_entry.set_text('')
+            self.msg_lbl.set_text('Your registration has been successfully completed!')
+            self.msg_lbl.set_padding(0,8)
+            self.btn1.set_text('Submit')
+            self.btn1.set_command(self.login_btn_click)
+
+            # Update layout
+            self.msg_lbl.pack()
+            self.msgFrame.pack() 
+
+    def login_btn_click(self):
+        """ Button command for Login"""
+        # If input match login credentials, update label
+        if self.check_login() == True:
+            self.msg_lbl.set_font(size=12, weight='normal', color='#B2FF8C')
+            self.msg_lbl.set_text('Successful Login!')   
+
+        # Else input doesn't match login credentials, update label
+        if self.check_login() == False:
+            self.msg_lbl.set_font(size=12, weight='normal', color='#FF8C8C')
+            self.msg_lbl.set_text('Invalid Login!')
+
     def check_user(self):
         """ Check password input entry """
         username_err_messages = [] # Error message list
@@ -109,9 +155,6 @@ class App(tk.Tk):
         # Check if username is greater than 8 length
         if len(user_txt) < 8: 
             username_err_messages.append("- Must have at least 8 characters")
-        # Check if username has a space
-        if any(char == " " for char in user_txt):
-            username_err_messages.append("- Cannot have any space(s)")
         
         # Return error list
         return username_err_messages
@@ -141,20 +184,37 @@ class App(tk.Tk):
         # Check if password has a symbol
         if not any(char in symbol for char in pass_txt): 
             password_err_messages.append("- Must have at least one symbol")
-        # Check if password has a space
-        if any(char == " " for char in pass_txt):
-            password_err_messages.append("- Cannot have any space(s)")
 
         # Return error list
         return password_err_messages
     
-    def create_login(self):
-        """ Create login credential file """
-        with open('Login.txt', 'w') as f:
-            f.write(self.user_entry.get())
-            f.write(self.pass_entry.get())
+    def check_login(self):
+        """ Check login credential file """
+        # Read login file
+        with open('Login.txt', 'r') as f:
+            # Store login information (strip any white space)
+            username = f.readline().strip()
+            password = f.readline().strip()
             f.close()
 
+        # If login information is valid
+        if username == self.user_entry.get() and password == self.pass_entry.get():
+            return True
+        else:
+            return False
+    
+    def create_login(self):
+        """ Create login credential file """
+        # Store and clean input
+        new_username = self.user_entry.get().strip()
+        new_password = self.pass_entry.get().strip()
+
+        # Write login file
+        with open('Login.txt', 'w') as f:
+            f.write(f'{new_username}\n')
+            f.write(f'{new_password}\n')
+            f.close()
+    
 
 class Frame(tk.Frame):
     """ Custom Tkinter Frame """
@@ -186,11 +246,7 @@ class Entry(tk.Entry):
             border=0
         )        
 
-        # Widget binds (Key, KeyPress, Mouse, etc.)
-        self.bind('<Button-1>', self.click) # Left Click           
-
-    def click(self, event):
-        """ Click Entry Event """
+        # If Entry flag true 
         if self.flag == True: 
             self.configure(show='*') # Change input display style
     
@@ -219,10 +275,18 @@ class Label(tk.Label):
             foreground=color,
             font=font.Font(family=family, size=size, weight=weight)
         )
-    
+
+    def set_padding(self, x: int, y: int):
+        self.configure(
+            padx=x,
+            pady=y
+        )
+
     def set_text(self, text: str):
         """ Set Label text """
-        self.configure(text=text)
+        self.configure(
+            text=text
+        )
 
 
 class Button(tk.Button):
@@ -242,6 +306,10 @@ class Button(tk.Button):
             justify='center',
             default='normal',
         )
+
+    def set_text(self, text: str):
+        """ Set Button text """
+        self.configure(text=text)
 
     def set_command(self, func: None):
         """ Set Button command """
