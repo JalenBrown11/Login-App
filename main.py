@@ -61,7 +61,7 @@ class App(tk.Tk):
         self.btn1.pack()
         
         # Frame layout (Main Frame)
-        self.titleFrame.pack(side=tk.TOP, pady=[0, 4])
+        self.titleFrame.pack(side=tk.TOP, pady=[0, 12])
         self.inputFrame.pack(side=tk.TOP)
         self.msgFrame.pack(side=tk.TOP)
         self.btnFrame.pack(side=tk.TOP, pady=[8, 0])
